@@ -1,0 +1,131 @@
+label kernel_entry_point
+DEBUG_OFF
+copy FREE_MEMORY_END to REG_A
+write OP_INCR to REG_OP
+cpu_exec
+copy REG_RES to var:sys_stack_ptr
+
+copy PROGRAM_COUNTER to var:sys_return
+jump label:sys_fs_init
+var line
+var word1
+var desc
+var counter
+var max_line 
+write 9 to var:max_line
+write 0 to var:counter
+write "" to var:desc
+write "" to var:word1
+
+
+label startKernel
+    copy var:counter to REG_A
+    copy var:max_line to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:exit
+
+    write "2.txt" to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_open
+   
+    copy REG_RES to DISPLAY_BUFFER
+    copy REG_RES to var:desc
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    copy REG_ERROR to DISPLAY_BUFFER
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+    jump_err label:startKernel
+
+    copy REG_RES to REG_A
+    copy var:counter to REG_B
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_read
+    copy REG_RES to var:line
+
+    copy var:line to REG_A
+    write 1 to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:word1
+
+    // copy var:word1 to DISPLAY_BUFFER
+    // write COLOR_NO to DISPLAY_COLOR
+    // write OP_DISPLAY_LN to REG_OP
+    // cpu_exec
+
+    copy var:word1 to REG_A
+    write OP_IS_NUM to REG_OP
+    cpu_exec
+    jump_if label:increment_number
+
+    write "//////" to DISPLAY_BUFFER
+    write COLOR_NO to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    copy var:counter to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+
+    write "------" to DISPLAY_BUFFER
+    write COLOR_NO to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    copy var:desc to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_close   
+    jump label:startKernel
+
+
+label increment_number
+
+    copy var:line to DISPLAY_BUFFER
+    write COLOR_NO to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    copy var:word1 to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:word1
+
+    copy var:line to REG_A
+    write 1 to REG_B
+    write " "  to REG_C
+    copy var:word1 to REG_D
+    write OP_REPLACE_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:line
+
+    copy var:desc to REG_A
+    copy var:counter to REG_B
+    copy var:line to REG_C
+    copy PROGRAM_COUNTER to var:sys_return
+
+    jump label:sys_fs_write
+    copy var:desc to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+
+    copy var:counter to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+    jump label:startKernel
+
+label exit
+    copy var:desc to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_close   
+    write "Goodbye!" to DISPLAY_BUFFER
+    write COLOR_YELLOW to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    write OP_HALT to REG_OP
+    cpu_exec
