@@ -1,0 +1,657 @@
+var counter
+var counter2
+var counter_
+write 0 to var:counter_
+write 2 to var:counter2
+var three
+write 3 to var:three
+var counter_for_line
+var exit
+var user_disk_name
+var freeAddress
+var startAddress
+var partition_name
+var temp_number
+var disk_line
+var number_for_partition
+var counter_to_check_each_partiotion
+var  partition_header_line
+write 0 to var:counter_to_check_each_partiotion
+write 3 to var:counter_for_line
+var number_
+write 8 to var:number_
+var count
+write 0 to var:count
+var count2
+write 8 to var:count2
+
+var num1
+write 0 to var:num1
+var num2
+write 0 to var:num2
+var counter_for_pair
+write 0 to var:counter_for_pair
+
+label startKernel
+
+    write "Write the disk name: " to DISPLAY_BUFFER
+    write COLOR_NO to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    write OP_READ_INPUT to REG_OP
+    write KEYBOARD_READ_LINE to REG_A
+    cpu_exec
+
+    copy KEYBOARD_BUFFER to var:user_disk_name
+    write 1 to var:counter
+
+    copy FREE_MEMORY_START to var:freeAddress
+    copy FREE_MEMORY_START to var:startAddress
+    jump label:read_disk
+
+
+label read_disk
+    copy var:user_disk_name to REG_A
+    copy var:counter to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    jump_err label:error
+
+    write "Write the name of partition: " to DISPLAY_BUFFER
+    write COLOR_NO to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+    
+    write OP_READ_INPUT to REG_OP
+    write KEYBOARD_READ_LINE to REG_A
+    cpu_exec
+
+    copy KEYBOARD_BUFFER to var:partition_name
+    write 2 to var:counter
+
+    jump label:start_read_partitions
+
+
+
+label start_read_partitions
+
+    copy var:user_disk_name to REG_A
+    copy var:counter_for_line to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to REG_A
+    copy REG_A to var:disk_line
+
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:number_for_partition
+
+
+    copy var:counter_for_line to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter_for_line
+    jump label:read_and_save_partition_name
+
+
+label read_and_save_partition_name
+
+    copy var:counter_to_check_each_partiotion to REG_A
+    copy var:number_for_partition to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+
+    jump_if label:to_get_last_number_in_partition_table
+
+    copy var:user_disk_name to REG_A
+    copy var:counter_for_line to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to REG_A
+    copy REG_A to var:disk_line
+
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to *FREE_MEMORY_START
+
+    copy var:freeAddress to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:freeAddress
+
+    copy var:freeAddress to FREE_MEMORY_START
+
+    copy var:counter_for_line to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter_for_line
+
+    copy var:counter_to_check_each_partiotion to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter_to_check_each_partiotion
+    jump label:read_and_save_partition_name
+
+
+//----------------------------------------------------------
+label to_get_last_number_in_partition_table
+
+    var counter_for_line_copy
+    copy var:counter_for_line to var:counter_for_line_copy
+    var disk_line_copy
+
+    copy var:counter_for_line_copy to REG_A
+    write 1 to REG_B
+    write OP_SUB to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter_for_line_copy
+
+    copy var:user_disk_name to REG_A
+    copy var:counter_for_line_copy to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to REG_A
+    copy REG_A to var:disk_line_copy
+
+    var partition_header_line_end
+    var partition_header_line_end_number
+   
+    copy var:disk_line_copy to REG_A
+    write 6 to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:partition_header_line_end_number
+
+    jump label:start_if_partition_exist
+
+//----------------------------------------------------------
+
+label start_if_partition_exist
+    copy var:startAddress to var:freeAddress
+    copy var:freeAddress to FREE_MEMORY_START
+    write 0 to var:counter
+    jump label:check_if_partition_exist
+
+
+label check_if_partition_exist
+
+    copy var:counter to REG_A
+    copy var:number_for_partition to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:error
+
+    copy var:partition_name to REG_A
+    copy *FREE_MEMORY_START to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:start_validate_the_partition_header
+
+    copy var:freeAddress to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:freeAddress
+
+    copy var:freeAddress to FREE_MEMORY_START
+
+    copy var:counter to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+    jump label:check_if_partition_exist
+
+
+label start_validate_the_partition_header
+    copy var:startAddress to var:freeAddress
+    copy var:freeAddress to FREE_MEMORY_START
+    write 4 to var:counter
+    jump label:validate_the_partition_header
+
+
+label validate_the_partition_header
+    copy var:user_disk_name to REG_A
+    copy var:counter to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to var:disk_line
+
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:partition_header_line
+
+    copy var:user_disk_name to REG_A
+    copy var:partition_header_line to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to var:disk_line
+
+    write 1 to var:counter
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+
+    copy REG_RES to REG_A
+    write "FS_HEADER" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+    write 2 to var:counter
+
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+
+    copy REG_RES to REG_A
+    write "kagu_fs" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+    write 3 to var:counter
+
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+
+    copy REG_RES to REG_A
+    write "FIRST_USABLE_BLOCK" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+
+    write 5 to var:counter
+
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+
+    copy REG_RES to REG_A
+    write "LAST_USABLE_BLOCK" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    var first_num
+    var second_num
+
+    write 4 to var:counter
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:first_num
+
+    write 6 to var:counter
+    copy var:disk_line to REG_A
+    copy var:counter to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:second_num
+
+    jump label:validate_number
+
+
+label validate_number
+    copy var:first_num to REG_A
+    write OP_IS_NUM to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:second_num to REG_A
+    write OP_IS_NUM to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:first_num to REG_A
+    copy var:second_num to REG_B
+    write OP_CMP_LT to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:partition_header_line to REG_A
+    copy var:first_num to REG_B
+    write OP_CMP_LE to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:second_num to REG_A
+    copy var:partition_header_line_end_number to REG_B
+    write OP_CMP_LE to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:partition_header_line to var:counter
+    copy var:counter to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+
+    copy var:first_num to REG_A
+    write 1 to REG_B
+    write OP_SUB to REG_OP
+    cpu_exec
+    copy REG_RES to var:first_num
+
+    jump label:validate_file_headers_empty
+
+
+label validate_file_headers_empty
+    copy var:counter to REG_A
+    copy var:first_num to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:validate_header_end
+//--------------------------------
+    copy var:user_disk_name to REG_A
+    copy var:counter to REG_B
+    // write " " to REG_C
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to var:disk_line
+
+    write "" to REG_A
+    copy var:disk_line to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:validate_numbers_in_file_headers_correct_form_
+
+    copy var:counter to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+    jump label:validate_file_headers_empty
+
+
+label validate_numbers_in_file_headers_correct_form_ 
+
+    copy var:counter_ to REG_A
+    copy var:three to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:check
+
+    copy var:disk_line to REG_A
+    copy var:counter2 to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:temp_number
+
+    copy var:temp_number to REG_A
+    write OP_IS_NUM to REG_OP
+    cpu_exec
+    jump_if_not label:error 
+
+    write 0 to REG_A
+    copy var:temp_number to REG_B
+    write OP_CMP_LE to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:temp_number to REG_A
+    write 7 to REG_B
+    write OP_CMP_LE to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:counter2 to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter2
+
+    copy var:counter_ to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter_
+    jump label:validate_numbers_in_file_headers_correct_form_
+
+
+label check
+    var temporary_value
+    copy var:disk_line to REG_A
+    write 5 to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:temporary_value
+
+    write "user" to REG_A
+    copy var:temporary_value to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+    
+    copy var:disk_line to REG_A
+    write 6 to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:temporary_value
+
+    write "user" to REG_A
+    copy var:temporary_value to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:disk_line to REG_A
+    write 7 to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:temporary_value
+
+    write "BLOCKS" to REG_A
+    copy var:temporary_value to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+    jump_if label:validate__if_is_pairs_in_file_headers_correct_form_
+
+
+label validate__if_is_pairs_in_file_headers_correct_form_
+    copy var:disk_line to REG_A
+    copy var:number_ to REG_B
+    write " " to REG_C
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:temp_number
+
+    write "" to REG_A
+    copy var:temp_number to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:is_pair
+
+    copy var:temp_number to REG_A
+    write OP_IS_NUM to REG_OP
+    cpu_exec
+    jump_if_not label:error 
+
+    copy var:number_ to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:number_
+
+    copy var:counter_for_pair to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter_for_pair
+
+    jump label:validate__if_is_pairs_in_file_headers_correct_form_
+
+
+label is_pair
+    var result
+    copy var:counter_for_pair to REG_A
+    write 2 to REG_B
+    write OP_MOD to REG_OP
+    cpu_exec
+    copy REG_RES to var:result
+
+    write 1 to REG_A
+    copy var:result to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:error
+
+    write 0 to REG_A
+    copy var:result to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:change_result
+
+
+label change_result
+    var number_to_validate
+    copy var:counter_for_pair to var:number_to_validate
+
+    copy var:number_to_validate to REG_A
+    write 1 to REG_B
+    write OP_SUB to REG_OP
+    cpu_exec
+    copy REG_RES to var:number_to_validate
+
+    copy var:disk_line to REG_A
+    copy var:count2 to REG_B
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:num1
+
+    copy var:count2 to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:count2
+
+    jump label:continue_validate
+
+
+label continue_validate
+    copy var:count to REG_A
+    copy var:number_to_validate to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:const_value
+
+    copy var:disk_line to REG_A
+    copy var:count2 to REG_B
+    write OP_GET_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to var:num2
+
+    copy var:num1 to REG_A
+    copy var:num2 to REG_B
+    write OP_CMP_LE to REG_OP
+    cpu_exec
+    jump_if_not label:error
+
+    copy var:num2 to var:num1
+
+    copy var:count to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:count
+
+    copy var:count2 to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:count2
+
+    jump label:continue_validate
+
+
+label const_value
+
+    write 0 to var:counter_
+    write 2 to var:counter2
+    write 8 to var:number_
+    write 8 to var:count2
+    write 0 to var:count
+    write 0 to var:counter_for_pair
+
+    copy var:counter to REG_A
+    write 1 to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+    jump label:validate_file_headers_empty
+
+
+label validate_header_end
+    copy var:counter to DISPLAY_BUFFER
+    write COLOR_GREEN to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    copy var:user_disk_name to REG_A
+    copy var:counter to REG_B
+    write OP_READ_BLOCK to REG_OP
+    cpu_exec
+    copy REG_RES to var:disk_line
+
+    copy var:disk_line to DISPLAY_BUFFER
+    write COLOR_GREEN to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    write "FS_HEADER_END" to REG_A
+    copy var:disk_line to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if_not label:error
+    jump label:exit
+
+
+label exit
+    write "System checked!" to DISPLAY_BUFFER
+    write COLOR_YELLOW to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+    write OP_HALT to REG_OP
+    cpu_exec
+
+
+label error
+    write "ERROR!" to DISPLAY_BUFFER
+    //copy REG_ERROR to DISPLAY_BUFFER
+    write COLOR_RED to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+    write OP_HALT to REG_OP
+    cpu_exec
